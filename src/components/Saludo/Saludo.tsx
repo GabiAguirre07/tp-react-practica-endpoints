@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { User } from "../../types/user";
+import type { UserDetail } from "../../types/user";
 import { formatearSaludo } from "../../utils/usuarios";
 import "./Saludo.css";
 
@@ -16,14 +16,15 @@ interface SaludoProps {
  *
  * El token no dice quién es el usuario, así que se hacen dos pedidos
  * encadenados: `GET /user/me/id` devuelve el id del dueño del token y
- * `GET /user/{id}` sus datos. Si alguno falla, el saludo no se muestra (la
- * lista de usuarios ya informa el error) pero el botón sigue disponible.
+ * `GET /user/{id}` sus datos, que ya incluyen los roles ("Hola, Martina
+ * (ADMIN)"). Si alguno falla, el saludo no se muestra (la lista de usuarios
+ * ya informa el error) pero el botón sigue disponible.
  *
  * @param props - {@link SaludoProps}.
  * @returns El saludo y el botón "Cerrar sesión".
  */
 export function Saludo({ token, onCerrarSesion }: SaludoProps) {
-  const [usuario, setUsuario] = useState<User | null>(null);
+  const [usuario, setUsuario] = useState<UserDetail | null>(null);
 
   useEffect(() => {
     let ignorar = false;
@@ -61,7 +62,9 @@ export function Saludo({ token, onCerrarSesion }: SaludoProps) {
   return (
     <div className="saludo">
       {usuario && (
-        <p className="saludo-texto">{formatearSaludo(usuario.name)}</p>
+        <p className="saludo-texto">
+          {formatearSaludo(usuario.name, usuario.roles)}
+        </p>
       )}
       <button className="saludo-boton" type="button" onClick={onCerrarSesion}>
         Cerrar sesión
