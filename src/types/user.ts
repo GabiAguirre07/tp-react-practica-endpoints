@@ -41,3 +41,24 @@ export interface UserDetail extends User {
   /** Roles del usuario; la lista puede venir vacía. */
   roles: Role[];
 }
+
+/**
+ * Datos para crear un usuario: el body de `POST /user`.
+ *
+ * Los nombres de los campos son los que espera la API (por eso
+ * `country_id` va en snake_case). `age` y `country_id` son números: si
+ * viajaran como texto, FastAPI respondería 422.
+ */
+export interface NewUser {
+  name: string;
+  age: number;
+  email: string;
+  password: string;
+  country_id: number;
+}
+
+/**
+ * Valores del formulario de alta, todos como texto (así los entregan los
+ * inputs). Tiene exactamente las mismas claves que {@link NewUser}.
+ */
+export type NewUserFields = Record<keyof NewUser, string>;

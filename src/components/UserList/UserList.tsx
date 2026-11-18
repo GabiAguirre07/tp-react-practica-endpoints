@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
-import type { User } from "../../types/user";
-import { armarRutaUsuarios, describirConsulta } from "../../utils/consultas";
+import type { NewUser, User } from "../../types/user";
+import {
+  armarRutaUsuarios,
+  coincideConConsulta,
+  describirConsulta,
+} from "../../utils/consultas";
 import type { ConsultaUsuarios } from "../../utils/consultas";
 import { MENSAJE_ERROR_RED, obtenerMensajeError } from "../../utils/errores";
 import { UserDetailPanel } from "../UserDetailPanel/UserDetailPanel";
+import { UserForm } from "../UserForm/UserForm";
 import { UserSearch } from "../UserSearch/UserSearch";
 import "./UserList.css";
 
@@ -22,10 +27,12 @@ interface UserListProps {
  * "Cargando..."; si la API responde con error (401, 403, 404…), muestra su
  * `detail` en lugar de la lista. Cada nombre es un botón: al elegirlo se
  * guarda su id en `selectedId` y se muestra su detalle en
- * {@link UserDetailPanel}.
+ * {@link UserDetailPanel}. Debajo está el alta ({@link UserForm}): el usuario
+ * creado se agrega a la lista sin volver a pedirla.
  *
  * @param props - {@link UserListProps}.
- * @returns La sección con el buscador, la lista (o su estado) y el detalle.
+ * @returns La sección con el buscador, la lista (o su estado), el detalle y
+ *   el formulario de alta.
  */
 export function UserList({ token }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
@@ -104,6 +111,22 @@ export function UserList({ token }: UserListProps) {
     setConsulta({ tipo: "todos" });
   }
 
+  /**
+   * Agrega a la lista el usuario recién creado, si corresponde a la
+   * consulta actual (ver `coincideConConsulta`).
+   *
+   * Usa la forma funcional del setter porque la lista nueva se arma a partir
+   * de la anterior, con spread: no se modifica el array existente.
+   *
+   * @param id - Id asignado por la API.
+   * @param datos - Datos con los que se creó el usuario.
+   */
+  function handleUsuarioCreado(id: number, datos: NewUser) {
+    if (coincideConConsulta(datos, consulta)) {
+      setUsers((anteriores) => [...anteriores, { id, name: datos.name }]);
+    }
+  }
+
   return (
     <section className="user-list" aria-labelledby="user-list-titulo">
       <h2 className="user-list-titulo" id="user-list-titulo">
@@ -148,6 +171,7 @@ export function UserList({ token }: UserListProps) {
           onCerrar={handleCerrarDetalle}
         />
       )}
+      <UserForm token={token} onCreado={handleUsuarioCreado} />
     </section>
   );
 }

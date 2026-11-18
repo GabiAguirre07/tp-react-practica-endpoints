@@ -1,0 +1,61 @@
+/* ===== UserForm · alta de usuario ===== */
+
+.user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed #94a3b8;
+  border-radius: 10px;
+  background-color: #f8fafc;
+}
+
+.user-form-titulo {
+  font-size: 1.05rem;
+}
+
+.user-form-campos {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.user-form-etiqueta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.user-form-input {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #ffffff;
+}
+
+.user-form-boton {
+  align-self: flex-start;
+  padding: 0.45rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #15803d;
+}
+
+.user-form-boton:disabled {
+  opacity: 0.6;
+}
+
+.user-form-mensaje {
+  margin: 0;
+  color: #15803d;
+}
+
+/* Modificador: el alta falló */
+.user-form-mensaje-error {
+  color: #b91c1c;
+}

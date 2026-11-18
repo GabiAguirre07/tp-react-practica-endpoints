@@ -1,3 +1,5 @@
+import type { NewUser, NewUserFields } from "../types/user";
+
 /**
  * Obtiene el primer nombre de un nombre completo.
  *
@@ -41,4 +43,24 @@ export function formatearSaludo(
     return saludo;
   }
   return `${saludo} (${formatearRoles(roles)})`;
+}
+
+/**
+ * Convierte los valores del formulario de alta en el body de `POST /user`.
+ *
+ * Función pura: los inputs guardan texto y la API espera números en `age` y
+ * `country_id`, así que se convierten con `Number(...)` recién al enviar.
+ * El nombre y el email se envían sin espacios en los extremos.
+ *
+ * @param campos - Valores del formulario, como texto.
+ * @returns El objeto listo para `JSON.stringify`.
+ */
+export function crearNuevoUsuario(campos: NewUserFields): NewUser {
+  return {
+    name: campos.name.trim(),
+    age: Number(campos.age),
+    email: campos.email.trim(),
+    password: campos.password,
+    country_id: Number(campos.country_id),
+  };
 }
