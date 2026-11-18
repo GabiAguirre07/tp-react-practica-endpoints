@@ -7,6 +7,8 @@ import "./LoginForm.css";
 interface LoginFormProps {
   /** Se llama con el token cuando el login sale bien. */
   onLogin: (token: string) => void;
+  /** Mensaje para mostrar arriba del formulario, por ejemplo "Tu sesión venció". */
+  aviso: string | null;
 }
 
 /**
@@ -15,12 +17,13 @@ interface LoginFormProps {
  * Inputs controlados para email y contraseña. Si la API rechaza los datos,
  * muestra su `detail` ("User/password incorrect"); si responde bien, le pasa
  * el token a `App` con `onLogin`. Este componente no guarda el token: decide
- * qué hacer con él quien lo usa (responsabilidad única).
+ * qué hacer con él quien lo usa (responsabilidad única). Si `App` le pasa
+ * un `aviso` (sesión vencida), lo muestra arriba del formulario.
  *
  * @param props - {@link LoginFormProps}.
  * @returns La pantalla de login.
  */
-export function LoginForm({ onLogin }: LoginFormProps) {
+export function LoginForm({ onLogin, aviso }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     <main className="login">
       <form className="login-formulario" onSubmit={handleSubmit}>
         <h1 className="login-titulo">Iniciar sesión</h1>
+        {aviso && (
+          <p className="login-aviso" role="alert">
+            {aviso}
+          </p>
+        )}
         <label className="login-etiqueta" htmlFor={idEmail}>
           Email
         </label>

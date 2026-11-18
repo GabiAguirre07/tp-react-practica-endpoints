@@ -37,6 +37,8 @@ interface UserFormProps {
    * @param datos - Datos con los que se creó.
    */
   onCreado: (id: number, datos: NewUser) => void;
+  /** Se llama si la API responde 401: el token venció o no es válido. */
+  onUnauthorized: () => void;
 }
 
 /**
@@ -46,12 +48,13 @@ interface UserFormProps {
  * y los actualiza con un único handler gracias al atributo `name` de cada
  * input. Al enviar convierte los textos con `crearNuevoUsuario` (edad y país
  * como número). Si la API responde con error, por ejemplo
- * "Missing permission: write_users" al usar `sfer`, muestra ese mensaje.
+ * "Missing permission: write_users" al usar `sfer`, muestra ese mensaje;
+ * si responde 401, avisa con `onUnauthorized`.
  *
  * @param props - {@link UserFormProps}.
  * @returns El formulario de alta con su mensaje de resultado.
  */
-export function UserForm({ token, onCreado }: UserFormProps) {
+export function UserForm({ token, onCreado, onUnauthorized }: UserFormProps) {
   const [campos, setCampos] = useState<NewUserFields>(CAMPOS_VACIOS);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +98,10 @@ export function UserForm({ token, onCreado }: UserFormProps) {
         body: JSON.stringify(nuevoUsuario),
       });
       const data = await response.json();
+      if (response.status === 401) {
+        onUnauthorized();
+        return;
+      }
       if (!response.ok) {
         setError(obtenerMensajeError(data));
         return;

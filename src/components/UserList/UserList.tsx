@@ -22,6 +22,8 @@ interface Aviso {
 interface UserListProps {
   /** JWT de la sesión actual; se manda en el encabezado `Authorization`. */
   token: string;
+  /** Se llama si la API responde 401: el token venció o no es válido. */
+  onUnauthorized: () => void;
 }
 
 /**
@@ -31,7 +33,8 @@ interface UserListProps {
  * El estado `consulta` dice qué lista se quiere ver; el efecto vuelve a
  * pedirla cada vez que cambia. Mientras espera la respuesta muestra
  * "Cargando..."; si la API responde con error (401, 403, 404…), muestra su
- * `detail` en lugar de la lista. Cada nombre es un botón: al elegirlo se
+ * `detail` en lugar de la lista; si responde 401, avisa con
+ * `onUnauthorized` (lo mismo hacen el detalle, el alta y el borrado). Cada nombre es un botón: al elegirlo se
  * guarda su id en `selectedId` y se muestra su detalle en
  * {@link UserDetailPanel}. Cada fila tiene además un botón "Borrar"
  * (`DELETE /user/{id}`) que pide confirmación. Debajo está el alta ({@link UserForm}): el usuario
@@ -41,7 +44,7 @@ interface UserListProps {
  * @returns La sección con el buscador, la lista (o su estado), el detalle y
  *   el formulario de alta.
  */
-export function UserList({ token }: UserListProps) {
+export function UserList({ token, onUnauthorized }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,10 @@ export function UserList({ token }: UserListProps) {
         if (ignorar) {
           return;
         }
+        if (response.status === 401) {
+          onUnauthorized();
+          return;
+        }
         if (!response.ok) {
           setError(obtenerMensajeError(data)); // 401, 403…: viene { detail }
           return;
@@ -84,7 +91,7 @@ export function UserList({ token }: UserListProps) {
     return () => {
       ignorar = true;
     };
-  }, [token, consulta]);
+  }, [token, consulta, onUnauthorized]);
 
   const hayUsuarios = users.length > 0;
   const soloMayores = consulta.tipo === "mayores";
@@ -170,6 +177,10 @@ export function UserList({ token }: UserListProps) {
         },
       );
       const data = await response.json();
+      if (response.status === 401) {
+        onUnauthorized();
+        return;
+      }
       if (!response.ok) {
         setAviso({ tipo: "error", texto: obtenerMensajeError(data) });
         return;
@@ -250,9 +261,14 @@ export function UserList({ token }: UserListProps) {
           token={token}
           userId={selectedId}
           onCerrar={handleCerrarDetalle}
+          onUnauthorized={onUnauthorized}
         />
       )}
-      <UserForm token={token} onCreado={handleUsuarioCreado} />
+      <UserForm
+        token={token}
+        onCreado={handleUsuarioCreado}
+        onUnauthorized={onUnauthorized}
+      />
     </section>
   );
 }

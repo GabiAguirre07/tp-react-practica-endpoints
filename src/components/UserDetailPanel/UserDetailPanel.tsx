@@ -12,6 +12,8 @@ interface UserDetailPanelProps {
   userId: number;
   /** Se llama al presionar "Cerrar". */
   onCerrar: () => void;
+  /** Se llama si la API responde 401: el token venció o no es válido. */
+  onUnauthorized: () => void;
 }
 
 /**
@@ -20,7 +22,8 @@ interface UserDetailPanelProps {
  * Mientras llega la respuesta muestra "Cargando...". El pedido se repite
  * cada vez que cambia `userId`. Quien lo usa le pasa `key={userId}`: así
  * React crea un panel nuevo por cada usuario elegido y nunca se ve, ni por
- * un instante, el detalle del usuario anterior.
+ * un instante, el detalle del usuario anterior. Si la API responde 401,
+ * avisa con `onUnauthorized`.
  *
  * @param props - {@link UserDetailPanelProps}.
  * @returns El panel con los datos del usuario o el mensaje de error.
@@ -29,6 +32,7 @@ export function UserDetailPanel({
   token,
   userId,
   onCerrar,
+  onUnauthorized,
 }: UserDetailPanelProps) {
   const [user, setUser] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +49,10 @@ export function UserDetailPanel({
         );
         const data = await response.json();
         if (ignorar) {
+          return;
+        }
+        if (response.status === 401) {
+          onUnauthorized();
           return;
         }
         if (!response.ok) {
@@ -67,7 +75,7 @@ export function UserDetailPanel({
     return () => {
       ignorar = true;
     };
-  }, [token, userId]);
+  }, [token, userId, onUnauthorized]);
 
   return (
     <aside className="user-detail" aria-label="Detalle del usuario">

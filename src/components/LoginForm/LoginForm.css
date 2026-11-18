@@ -54,3 +54,11 @@
   margin: 0.4rem 0 0;
   color: #b91c1c;
 }
+
+.login-aviso {
+  margin: 0 0 0.4rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  color: #92400e;
+  background-color: #fffbeb;
+}

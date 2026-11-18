@@ -9,6 +9,8 @@ interface SaludoProps {
   token: string;
   /** Se llama al presionar "Cerrar sesión". */
   onCerrarSesion: () => void;
+  /** Se llama si la API responde 401: el token venció o no es válido. */
+  onUnauthorized: () => void;
 }
 
 /**
@@ -17,13 +19,14 @@ interface SaludoProps {
  * El token no dice quién es el usuario, así que se hacen dos pedidos
  * encadenados: `GET /user/me/id` devuelve el id del dueño del token y
  * `GET /user/{id}` sus datos, que ya incluyen los roles ("Hola, Martina
- * (ADMIN)"). Si alguno falla, el saludo no se muestra (la lista de usuarios
- * ya informa el error) pero el botón sigue disponible.
+ * (ADMIN)"). Si la API responde 401 avisa con `onUnauthorized`; ante
+ * cualquier otro error el saludo no se muestra (la lista de usuarios ya
+ * informa el error) pero el botón sigue disponible.
  *
  * @param props - {@link SaludoProps}.
  * @returns El saludo y el botón "Cerrar sesión".
  */
-export function Saludo({ token, onCerrarSesion }: SaludoProps) {
+export function Saludo({ token, onCerrarSesion, onUnauthorized }: SaludoProps) {
   const [usuario, setUsuario] = useState<UserDetail | null>(null);
 
   useEffect(() => {
@@ -37,6 +40,13 @@ export function Saludo({ token, onCerrarSesion }: SaludoProps) {
           { headers },
         );
         const dataId = await responseId.json();
+        if (ignorar) {
+          return;
+        }
+        if (responseId.status === 401) {
+          onUnauthorized();
+          return;
+        }
         if (!responseId.ok) {
           return;
         }
@@ -45,7 +55,14 @@ export function Saludo({ token, onCerrarSesion }: SaludoProps) {
           { headers },
         );
         const data = await response.json();
-        if (!ignorar && response.ok) {
+        if (ignorar) {
+          return;
+        }
+        if (response.status === 401) {
+          onUnauthorized();
+          return;
+        }
+        if (response.ok) {
           setUsuario(data);
         }
       } catch {
@@ -57,7 +74,7 @@ export function Saludo({ token, onCerrarSesion }: SaludoProps) {
     return () => {
       ignorar = true;
     };
-  }, [token]);
+  }, [token, onUnauthorized]);
 
   return (
     <div className="saludo">
