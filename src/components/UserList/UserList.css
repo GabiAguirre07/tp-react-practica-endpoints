@@ -36,3 +36,22 @@
 .user-list-item:last-child {
   border-bottom: none;
 }
+
+.user-list-nombre {
+  padding: 0.15rem 0.35rem;
+  border: none;
+  border-radius: 4px;
+  text-align: left;
+  color: #0e7490;
+  background: none;
+}
+
+.user-list-nombre:hover {
+  text-decoration: underline;
+}
+
+/* Modificador: usuario cuyo detalle se está mostrando */
+.user-list-nombre-activo {
+  font-weight: 700;
+  background-color: #cffafe;
+}
