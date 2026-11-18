@@ -61,3 +61,15 @@
   color: #64748b;
   font-style: italic;
 }
+
+.user-list-consulta {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.user-list-vacia {
+  margin: 0;
+  color: #c2410c;
+}

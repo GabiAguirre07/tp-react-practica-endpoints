@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import type { User } from "../../types/user";
+import { armarRutaUsuarios, describirConsulta } from "../../utils/consultas";
+import type { ConsultaUsuarios } from "../../utils/consultas";
 import { MENSAJE_ERROR_RED, obtenerMensajeError } from "../../utils/errores";
 import { UserDetailPanel } from "../UserDetailPanel/UserDetailPanel";
+import { UserSearch } from "../UserSearch/UserSearch";
 import "./UserList.css";
 
 /** Props de {@link UserList}. */
@@ -11,22 +14,25 @@ interface UserListProps {
 }
 
 /**
- * Lista de usuarios (`GET /user`).
+ * Lista de usuarios: completa (`GET /user`) o filtrada por nombre
+ * (`GET /user/search/{name}`).
  *
- * Pide la lista al montarse y cada vez que cambia el token. Mientras espera
- * la respuesta muestra "Cargando..."; si la API responde con error (401,
- * 403, 404…), muestra su `detail` en lugar de la lista.
- * Cada nombre es un botón: al elegirlo se guarda su id en `selectedId` y se
- * muestra su detalle en {@link UserDetailPanel}.
+ * El estado `consulta` dice qué lista se quiere ver; el efecto vuelve a
+ * pedirla cada vez que cambia. Mientras espera la respuesta muestra
+ * "Cargando..."; si la API responde con error (401, 403, 404…), muestra su
+ * `detail` en lugar de la lista. Cada nombre es un botón: al elegirlo se
+ * guarda su id en `selectedId` y se muestra su detalle en
+ * {@link UserDetailPanel}.
  *
  * @param props - {@link UserListProps}.
- * @returns La sección con la lista de usuarios o el mensaje de error.
+ * @returns La sección con el buscador, la lista (o su estado) y el detalle.
  */
 export function UserList({ token }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [consulta, setConsulta] = useState<ConsultaUsuarios>({ tipo: "todos" });
 
   useEffect(() => {
     let ignorar = false;
@@ -35,9 +41,10 @@ export function UserList({ token }: UserListProps) {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/user`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}${armarRutaUsuarios(consulta)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
         const data = await response.json();
         if (ignorar) {
           return;
@@ -62,7 +69,9 @@ export function UserList({ token }: UserListProps) {
     return () => {
       ignorar = true;
     };
-  }, [token]);
+  }, [token, consulta]);
+
+  const hayUsuarios = users.length > 0;
 
   /**
    * Muestra el detalle del usuario elegido.
@@ -78,11 +87,30 @@ export function UserList({ token }: UserListProps) {
     setSelectedId(null);
   }
 
+  /**
+   * Pide solo los usuarios cuyo nombre contiene el texto.
+   *
+   * Siempre se crea un objeto nuevo: aunque se repita el mismo texto, React
+   * ve un valor distinto y el efecto vuelve a pedir la lista.
+   *
+   * @param texto - Parte del nombre a buscar.
+   */
+  function handleBuscar(texto: string) {
+    setConsulta({ tipo: "busqueda", texto });
+  }
+
+  /** Vuelve a la lista completa. */
+  function handleLimpiar() {
+    setConsulta({ tipo: "todos" });
+  }
+
   return (
     <section className="user-list" aria-labelledby="user-list-titulo">
       <h2 className="user-list-titulo" id="user-list-titulo">
         Usuarios
       </h2>
+      <UserSearch onBuscar={handleBuscar} onLimpiar={handleLimpiar} />
+      <p className="user-list-consulta">{describirConsulta(consulta)}</p>
       {loading && (
         <p className="user-list-cargando" role="status">
           Cargando...
@@ -93,7 +121,10 @@ export function UserList({ token }: UserListProps) {
           {error}
         </p>
       )}
-      {!loading && !error && (
+      {!loading && !error && !hayUsuarios && (
+        <p className="user-list-vacia">No hay usuarios para mostrar.</p>
+      )}
+      {!loading && !error && hayUsuarios && (
         <ul className="user-list-items">
           {users.map((user) => (
             <li className="user-list-item" key={user.id}>
