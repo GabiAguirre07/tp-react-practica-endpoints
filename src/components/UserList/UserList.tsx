@@ -19,8 +19,8 @@ interface UserListProps {
 }
 
 /**
- * Lista de usuarios: completa (`GET /user`) o filtrada por nombre
- * (`GET /user/search/{name}`).
+ * Lista de usuarios: completa (`GET /user`), solo mayores de edad
+ * (`GET /user_mayores`) o filtrada por nombre (`GET /user/search/{name}`).
  *
  * El estado `consulta` dice qué lista se quiere ver; el efecto vuelve a
  * pedirla cada vez que cambia. Mientras espera la respuesta muestra
@@ -79,6 +79,7 @@ export function UserList({ token }: UserListProps) {
   }, [token, consulta]);
 
   const hayUsuarios = users.length > 0;
+  const soloMayores = consulta.tipo === "mayores";
 
   /**
    * Muestra el detalle del usuario elegido.
@@ -112,6 +113,15 @@ export function UserList({ token }: UserListProps) {
   }
 
   /**
+   * Alterna entre la lista completa y la de mayores de edad.
+   *
+   * Si se estaba mostrando una búsqueda, pasa a "Solo mayores".
+   */
+  function handleAlternarMayores() {
+    setConsulta(soloMayores ? { tipo: "todos" } : { tipo: "mayores" });
+  }
+
+  /**
    * Agrega a la lista el usuario recién creado, si corresponde a la
    * consulta actual (ver `coincideConConsulta`).
    *
@@ -133,6 +143,14 @@ export function UserList({ token }: UserListProps) {
         Usuarios
       </h2>
       <UserSearch onBuscar={handleBuscar} onLimpiar={handleLimpiar} />
+      <button
+        className={`user-list-filtro ${soloMayores ? "user-list-filtro-activo" : ""}`}
+        type="button"
+        onClick={handleAlternarMayores}
+        aria-pressed={soloMayores}
+      >
+        {soloMayores ? "Ver todos" : "Ver solo mayores"}
+      </button>
       <p className="user-list-consulta">{describirConsulta(consulta)}</p>
       {loading && (
         <p className="user-list-cargando" role="status">
