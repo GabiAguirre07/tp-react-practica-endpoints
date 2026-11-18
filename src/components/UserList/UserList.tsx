@@ -12,6 +12,12 @@ import { UserForm } from "../UserForm/UserForm";
 import { UserSearch } from "../UserSearch/UserSearch";
 import "./UserList.css";
 
+/** Resultado de una acción sobre la lista (por ahora, borrar). */
+interface Aviso {
+  tipo: "exito" | "error";
+  texto: string;
+}
+
 /** Props de {@link UserList}. */
 interface UserListProps {
   /** JWT de la sesión actual; se manda en el encabezado `Authorization`. */
@@ -27,7 +33,8 @@ interface UserListProps {
  * "Cargando..."; si la API responde con error (401, 403, 404…), muestra su
  * `detail` en lugar de la lista. Cada nombre es un botón: al elegirlo se
  * guarda su id en `selectedId` y se muestra su detalle en
- * {@link UserDetailPanel}. Debajo está el alta ({@link UserForm}): el usuario
+ * {@link UserDetailPanel}. Cada fila tiene además un botón "Borrar"
+ * (`DELETE /user/{id}`) que pide confirmación. Debajo está el alta ({@link UserForm}): el usuario
  * creado se agrega a la lista sin volver a pedirla.
  *
  * @param props - {@link UserListProps}.
@@ -40,6 +47,7 @@ export function UserList({ token }: UserListProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [consulta, setConsulta] = useState<ConsultaUsuarios>({ tipo: "todos" });
+  const [aviso, setAviso] = useState<Aviso | null>(null);
 
   useEffect(() => {
     let ignorar = false;
@@ -137,6 +145,45 @@ export function UserList({ token }: UserListProps) {
     }
   }
 
+  /**
+   * Borra un usuario, previa confirmación.
+   *
+   * Si la API confirma el borrado, el usuario se saca de la lista con
+   * `filter` (array nuevo, sin volver a pedir la lista) y, si su detalle
+   * estaba abierto, se cierra. Si la API lo rechaza (por ejemplo,
+   * "Missing permission: delete_users" con `sfer`), se muestra el mensaje y
+   * la lista queda igual.
+   *
+   * @param user - Usuario de la fila donde se presionó "Borrar".
+   */
+  async function handleBorrar(user: User) {
+    if (!window.confirm(`¿Borrar a ${user.name}?`)) {
+      return;
+    }
+    setAviso(null);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/user/${user.id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setAviso({ tipo: "error", texto: obtenerMensajeError(data) });
+        return;
+      }
+      setUsers((anteriores) => anteriores.filter((u) => u.id !== user.id));
+      if (selectedId === user.id) {
+        setSelectedId(null);
+      }
+      setAviso({ tipo: "exito", texto: `${data.msg}: ${user.name}.` });
+    } catch {
+      setAviso({ tipo: "error", texto: MENSAJE_ERROR_RED });
+    }
+  }
+
   return (
     <section className="user-list" aria-labelledby="user-list-titulo">
       <h2 className="user-list-titulo" id="user-list-titulo">
@@ -152,6 +199,14 @@ export function UserList({ token }: UserListProps) {
         {soloMayores ? "Ver todos" : "Ver solo mayores"}
       </button>
       <p className="user-list-consulta">{describirConsulta(consulta)}</p>
+      {aviso && (
+        <p
+          className={`user-list-aviso ${aviso.tipo === "error" ? "user-list-aviso-error" : ""}`}
+          role={aviso.tipo === "error" ? "alert" : "status"}
+        >
+          {aviso.texto}
+        </p>
+      )}
       {loading && (
         <p className="user-list-cargando" role="status">
           Cargando...
@@ -176,6 +231,14 @@ export function UserList({ token }: UserListProps) {
                 aria-pressed={user.id === selectedId}
               >
                 {user.name}
+              </button>
+              <button
+                className="user-list-borrar"
+                type="button"
+                onClick={() => handleBorrar(user)}
+                aria-label={`Borrar a ${user.name}`}
+              >
+                Borrar
               </button>
             </li>
           ))}

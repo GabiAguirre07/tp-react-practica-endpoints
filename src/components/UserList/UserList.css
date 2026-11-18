@@ -29,6 +29,10 @@
 }
 
 .user-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.45rem 0;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -87,4 +91,31 @@
 .user-list-filtro-activo {
   color: #ffffff;
   background-color: #7c3aed;
+}
+
+.user-list-borrar {
+  padding: 0.2rem 0.65rem;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #b91c1c;
+  background-color: #ffffff;
+}
+
+.user-list-borrar:hover {
+  background-color: #fef2f2;
+}
+
+.user-list-aviso {
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  color: #166534;
+  background-color: #f0fdf4;
+}
+
+/* Modificador: la acción falló */
+.user-list-aviso-error {
+  color: #b91c1c;
+  background-color: #fef2f2;
 }
