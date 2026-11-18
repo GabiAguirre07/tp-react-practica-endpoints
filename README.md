@@ -101,18 +101,18 @@ Todos tienen la contraseña **`123`**.
 
 La base del profesor (login y lista de usuarios) se completó primero con lo que la consigna da por hecho de los pasos anteriores: token guardado en Local Storage, saludo "Hola, {nombre}" y botón para cerrar la sesión (**Etapa 0**). Las prácticas modifican la misma aplicación, así que el código está organizado por funcionalidad y cada práctica es un commit.
 
-| N°  | Práctica                     | Endpoint                         | Archivos principales                                             | Estado      |
-| --- | ---------------------------- | -------------------------------- | ---------------------------------------------------------------- | ----------- |
-| 0   | Base: sesión y saludo        | `POST /login`, `GET /user/me/id` | `App.tsx`, `LoginForm`, `Saludo`, `UserList`, `utils/sesion.ts`  | ✅ Resuelto |
-| 1   | Detalle de un usuario        | `GET /user/{id}`                 | `UserDetailPanel`, `UserList`, `types/user.ts`                   | ✅ Resuelto |
-| 2   | "Cargando..." y errores      | —                                | `UserList`, `UserDetailPanel`                                    | ✅ Resuelto |
-| 3   | Buscar por nombre            | `GET /user/search/{name}`        | `UserSearch`, `UserList`, `utils/consultas.ts`                   | ✅ Resuelto |
-| 4   | Mostrar mis roles            | `GET /user/{id}`                 | `Saludo`, `utils/usuarios.ts`                                    | ✅ Resuelto |
-| 5   | Alta de usuario              | `POST /user`                     | `UserForm`, `UserList`, `types/user.ts`, `utils/usuarios.ts`     | ✅ Resuelto |
-| 6   | Solo mayores de edad         | `GET /user_mayores`              | `UserList`, `utils/consultas.ts`                                 | ✅ Resuelto |
-| 7   | Borrar un usuario            | `DELETE /user/{id}`              | `UserList`                                                       | ✅ Resuelto |
-| 8   | Sesión vencida               | (cualquiera que responda 401)    | `App.tsx`, `LoginForm` y todos los componentes que hacen pedidos | ✅ Resuelto |
-| 9   | Para pensar antes del paso 8 | —                                | Respuesta abajo                                                  | ✅ Resuelto |
+| N°  | Práctica                     | Endpoint                         | Archivos principales                                                      | Estado      |
+| --- | ---------------------------- | -------------------------------- | ------------------------------------------------------------------------- | ----------- |
+| 0   | Base: sesión y saludo        | `POST /login`, `GET /user/me/id` | `App.tsx`, `LoginForm`, `Saludo`, `UserList`, `utils/sesion.ts`           | ✅ Resuelto |
+| 1   | Detalle de un usuario        | `GET /user/{id}`                 | `UserDetailPanel`, `UserList`, `types/user.ts`                            | ✅ Resuelto |
+| 2   | "Cargando..." y errores      | —                                | `UserList`, `UserDetailPanel`                                             | ✅ Resuelto |
+| 3   | Buscar por nombre            | `GET /user/search/{name}`        | `UserSearch`, `UserList`, `utils/consultas.ts`                            | ✅ Resuelto |
+| 4   | Mostrar mis roles            | `GET /user/{id}`                 | `Saludo`, `utils/usuarios.ts`                                             | ✅ Resuelto |
+| 5   | Alta de usuario              | `POST /user`                     | `UserForm`, `UserList`, `types/user.ts`, `utils/usuarios.ts`              | ✅ Resuelto |
+| 6   | Solo mayores de edad         | `GET /user_mayores`              | `UserList`, `utils/consultas.ts`                                          | ✅ Resuelto |
+| 7   | Borrar un usuario            | `DELETE /user/{id}`              | `UserList`                                                                | ✅ Resuelto |
+| 8   | Sesión vencida               | (cualquiera que responda 401)    | `App.tsx`, `LoginForm` y todos los componentes que hacen pedidos          | ✅ Resuelto |
+| 9   | Para pensar antes del paso 8 | —                                | Respuesta abajo; refactor en `api/cliente.ts` y `hooks/useConsultaApi.ts` | ✅ Resuelto |
 
 ### Cómo verificar cada práctica
 
@@ -174,6 +174,13 @@ Si el backend cambiara la forma de mandar el token (por ejemplo, un header `X-To
 
 El problema de fondo es que cada componente sabe **cómo** hablar con la API (URL, headers, formato de errores) además de **qué** mostrar: dos responsabilidades mezcladas y el mismo conocimiento copiado en varios lugares.
 
+**La solución (último commit del repositorio).** Se separó el "cómo" en dos piezas reutilizables:
+
+- **`src/api/cliente.ts`** — `pedirApi(ruta, { token, method, body })` es la única función que hace `fetch`: arma la URL con `VITE_API_URL`, agrega `Authorization` y `Content-Type`, revisa `response.ok` y convierte cualquier error en un `ErrorApi` con el código HTTP y el mensaje ya legible.
+- **`src/hooks/useConsultaApi.ts`** — un hook propio para los pedidos GET: concentra los estados `datos`, `loading` y `error`, el `useEffect`, el descarte de respuestas viejas y el aviso de 401.
+
+Después del refactor, `VITE_API_URL`, `Authorization` y `response.ok` aparecen **una sola vez** (en `cliente.ts`), y `loading` y `error` de las lecturas se declaran una sola vez (en el hook). Cambiar el header del token es modificar **una línea de un archivo**, y ya no existe la posibilidad de olvidarse de uno.
+
 ---
 
 ## Estructura del proyecto
@@ -191,6 +198,10 @@ tp-react-practica-endpoints/
     ├── main.tsx                ← punto de entrada: monta <App /> en el #root
     ├── App.tsx / App.css       ← sesión: login o pantalla de usuarios
     ├── index.css               ← estilos globales
+    ├── api/
+    │   └── cliente.ts          ← pedirApi: único lugar que hace fetch (URL, token, errores)
+    ├── hooks/
+    │   └── useConsultaApi.ts   ← hook propio para leer datos: datos, loading, error y 401
     ├── components/             ← un componente por carpeta, con su CSS
     │   ├── LoginForm/          formulario de inicio de sesión
     │   ├── Saludo/             "Hola, Martina (ADMIN)" y cerrar sesión
@@ -216,7 +227,8 @@ Cada componente tiene su propio `.css` con clases prefijadas (`user-list-…`, `
 - **Estado mínimo, valores derivados.** Lo que se puede calcular no se guarda: si hay usuarios, si el filtro está activo, el texto del saludo.
 - **Una consulta, una ruta.** Qué lista se ve es un solo estado (`consulta`, una unión discriminada: todos, mayores o búsqueda). Una función pura arma la ruta, con `encodeURIComponent` en un único lugar.
 - **Actualizar sin volver a pedir.** El alta agrega con spread (`[...anteriores, nuevo]`) solo si el usuario corresponde a la lista actual; el borrado saca con `filter`. Nunca se modifica el array existente.
-- **Respuestas viejas descartadas.** Cada `useEffect` que pide datos tiene una limpieza (`ignorar = true`): si el usuario busca dos veces seguidas, la respuesta lenta de la primera no pisa a la segunda.
+- **Acceso a la API en un solo lugar.** Las prácticas 1 a 8 se resolvieron como en la clase (un `fetch` en cada componente) y en el último commit se centralizó en `pedirApi` y `useConsultaApi` (ver la respuesta de la práctica 9). Los componentes quedaron a cargo solo de qué mostrar.
+- **Respuestas viejas descartadas.** El efecto que pide datos tiene una limpieza (`ignorar = true`): si el usuario busca dos veces seguidas, la respuesta lenta de la primera no pisa a la segunda.
 - **Errores legibles siempre.** Se contemplan los dos formatos de `detail` (texto y lista de errores 422) y el caso sin respuesta (backend apagado o error 500 sin CORS).
 - **Accesibilidad básica.** `label` vinculado a cada campo con `useId`, `role="alert"` en los errores, `role="status"` en "Cargando...", `aria-pressed` en el filtro y en el usuario elegido, `aria-label` en cada "Borrar".
 

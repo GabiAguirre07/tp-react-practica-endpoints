@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import type { ChangeEvent, SubmitEvent } from "react";
 import type { Country, NewUser, NewUserFields } from "../../types/user";
-import { MENSAJE_ERROR_RED, obtenerMensajeError } from "../../utils/errores";
+import { esNoAutorizado, obtenerMensaje, pedirApi } from "../../api/cliente";
 import { crearNuevoUsuario } from "../../utils/usuarios";
 import "./UserForm.css";
 
@@ -89,28 +89,20 @@ export function UserForm({ token, onCreado, onUnauthorized }: UserFormProps) {
     setEnviando(true);
     const nuevoUsuario = crearNuevoUsuario(campos);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user`, {
+      const data = await pedirApi<{ id: number }>("/user", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(nuevoUsuario),
+        token,
+        body: nuevoUsuario,
       });
-      const data = await response.json();
-      if (response.status === 401) {
-        onUnauthorized();
-        return;
-      }
-      if (!response.ok) {
-        setError(obtenerMensajeError(data));
-        return;
-      }
       setCampos(CAMPOS_VACIOS);
       setExito(`Usuario «${nuevoUsuario.name}» creado con id ${data.id}.`);
       onCreado(data.id, nuevoUsuario);
-    } catch {
-      setError(MENSAJE_ERROR_RED);
+    } catch (e) {
+      if (esNoAutorizado(e)) {
+        onUnauthorized();
+        return;
+      }
+      setError(obtenerMensaje(e));
     } finally {
       setEnviando(false);
     }

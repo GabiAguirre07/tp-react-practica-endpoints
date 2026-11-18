@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import type { SubmitEvent } from "react";
-import { MENSAJE_ERROR_RED, obtenerMensajeError } from "../../utils/errores";
+import { obtenerMensaje, pedirApi } from "../../api/cliente";
 import "./LoginForm.css";
 
 /** Props de {@link LoginForm}. */
@@ -45,19 +45,13 @@ export function LoginForm({ onLogin, aviso }: LoginFormProps) {
     setError(null);
     setEnviando(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
+      const data = await pedirApi<{ token: string }>("/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: { email, password },
       });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(obtenerMensajeError(data));
-        return;
-      }
       onLogin(data.token);
-    } catch {
-      setError(MENSAJE_ERROR_RED);
+    } catch (e) {
+      setError(obtenerMensaje(e));
     } finally {
       setEnviando(false);
     }

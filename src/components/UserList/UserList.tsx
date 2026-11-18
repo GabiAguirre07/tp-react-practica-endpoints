@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { esNoAutorizado, obtenerMensaje, pedirApi } from "../../api/cliente";
+import { useConsultaApi } from "../../hooks/useConsultaApi";
 import type { NewUser, User } from "../../types/user";
 import {
   armarRutaUsuarios,
@@ -6,7 +8,6 @@ import {
   describirConsulta,
 } from "../../utils/consultas";
 import type { ConsultaUsuarios } from "../../utils/consultas";
-import { MENSAJE_ERROR_RED, obtenerMensajeError } from "../../utils/errores";
 import { UserDetailPanel } from "../UserDetailPanel/UserDetailPanel";
 import { UserForm } from "../UserForm/UserForm";
 import { UserSearch } from "../UserSearch/UserSearch";
@@ -30,8 +31,8 @@ interface UserListProps {
  * Lista de usuarios: completa (`GET /user`), solo mayores de edad
  * (`GET /user_mayores`) o filtrada por nombre (`GET /user/search/{name}`).
  *
- * El estado `consulta` dice qué lista se quiere ver; el efecto vuelve a
- * pedirla cada vez que cambia. Mientras espera la respuesta muestra
+ * El estado `consulta` dice qué lista se quiere ver; {@link useConsultaApi}
+ * vuelve a pedirla cada vez que cambia la ruta que se arma con ella. Mientras espera la respuesta muestra
  * "Cargando..."; si la API responde con error (401, 403, 404…), muestra su
  * `detail` en lugar de la lista; si responde 401, avisa con
  * `onUnauthorized` (lo mismo hacen el detalle, el alta y el borrado). Cada nombre es un botón: al elegirlo se
@@ -45,53 +46,22 @@ interface UserListProps {
  *   el formulario de alta.
  */
 export function UserList({ token, onUnauthorized }: UserListProps) {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [consulta, setConsulta] = useState<ConsultaUsuarios>({ tipo: "todos" });
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
-  useEffect(() => {
-    let ignorar = false;
+  const {
+    datos: usuariosRecibidos,
+    setDatos: setUsers,
+    loading,
+    error,
+  } = useConsultaApi<User[]>(
+    armarRutaUsuarios(consulta),
+    token,
+    onUnauthorized,
+  );
 
-    async function cargarUsuarios() {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}${armarRutaUsuarios(consulta)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        const data = await response.json();
-        if (ignorar) {
-          return;
-        }
-        if (response.status === 401) {
-          onUnauthorized();
-          return;
-        }
-        if (!response.ok) {
-          setError(obtenerMensajeError(data)); // 401, 403…: viene { detail }
-          return;
-        }
-        setUsers(data); // 200: recién acá es una lista
-      } catch {
-        if (!ignorar) {
-          setError(MENSAJE_ERROR_RED);
-        }
-      } finally {
-        if (!ignorar) {
-          setLoading(false);
-        }
-      }
-    }
-
-    cargarUsuarios();
-    return () => {
-      ignorar = true;
-    };
-  }, [token, consulta, onUnauthorized]);
+  const users = usuariosRecibidos ?? [];
 
   const hayUsuarios = users.length > 0;
   const soloMayores = consulta.tipo === "mayores";
@@ -148,7 +118,10 @@ export function UserList({ token, onUnauthorized }: UserListProps) {
    */
   function handleUsuarioCreado(id: number, datos: NewUser) {
     if (coincideConConsulta(datos, consulta)) {
-      setUsers((anteriores) => [...anteriores, { id, name: datos.name }]);
+      setUsers((anteriores) => [
+        ...(anteriores ?? []),
+        { id, name: datos.name },
+      ]);
     }
   }
 
@@ -169,29 +142,23 @@ export function UserList({ token, onUnauthorized }: UserListProps) {
     }
     setAviso(null);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/user/${user.id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
+      const data = await pedirApi<{ msg: string }>(`/user/${user.id}`, {
+        method: "DELETE",
+        token,
+      });
+      setUsers((anteriores) =>
+        (anteriores ?? []).filter((u) => u.id !== user.id),
       );
-      const data = await response.json();
-      if (response.status === 401) {
-        onUnauthorized();
-        return;
-      }
-      if (!response.ok) {
-        setAviso({ tipo: "error", texto: obtenerMensajeError(data) });
-        return;
-      }
-      setUsers((anteriores) => anteriores.filter((u) => u.id !== user.id));
       if (selectedId === user.id) {
         setSelectedId(null);
       }
       setAviso({ tipo: "exito", texto: `${data.msg}: ${user.name}.` });
-    } catch {
-      setAviso({ tipo: "error", texto: MENSAJE_ERROR_RED });
+    } catch (e) {
+      if (esNoAutorizado(e)) {
+        onUnauthorized();
+        return;
+      }
+      setAviso({ tipo: "error", texto: obtenerMensaje(e) });
     }
   }
 

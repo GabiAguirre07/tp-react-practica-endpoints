@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useConsultaApi } from "../../hooks/useConsultaApi";
 import type { UserDetail } from "../../types/user";
-import { MENSAJE_ERROR_RED, obtenerMensajeError } from "../../utils/errores";
 import { formatearRoles } from "../../utils/usuarios";
 import "./UserDetailPanel.css";
 
@@ -19,11 +18,11 @@ interface UserDetailPanelProps {
 /**
  * Muestra email, edad, país y roles de un usuario (`GET /user/{id}`).
  *
- * Mientras llega la respuesta muestra "Cargando...". El pedido se repite
- * cada vez que cambia `userId`. Quien lo usa le pasa `key={userId}`: así
- * React crea un panel nuevo por cada usuario elegido y nunca se ve, ni por
- * un instante, el detalle del usuario anterior. Si la API responde 401,
- * avisa con `onUnauthorized`.
+ * El pedido, el "Cargando..." y los errores los resuelve
+ * {@link useConsultaApi}, que repite el pedido cada vez que cambia `userId`.
+ * Quien lo usa le pasa `key={userId}`: así React crea un panel nuevo por
+ * cada usuario elegido y nunca se ve, ni por un instante, el detalle del
+ * usuario anterior. Si la API responde 401, avisa con `onUnauthorized`.
  *
  * @param props - {@link UserDetailPanelProps}.
  * @returns El panel con los datos del usuario o el mensaje de error.
@@ -34,48 +33,11 @@ export function UserDetailPanel({
   onCerrar,
   onUnauthorized,
 }: UserDetailPanelProps) {
-  const [user, setUser] = useState<UserDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let ignorar = false;
-
-    async function cargarDetalle() {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/${userId}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        const data = await response.json();
-        if (ignorar) {
-          return;
-        }
-        if (response.status === 401) {
-          onUnauthorized();
-          return;
-        }
-        if (!response.ok) {
-          setError(obtenerMensajeError(data));
-          return;
-        }
-        setUser(data);
-      } catch {
-        if (!ignorar) {
-          setError(MENSAJE_ERROR_RED);
-        }
-      } finally {
-        if (!ignorar) {
-          setLoading(false);
-        }
-      }
-    }
-
-    cargarDetalle();
-    return () => {
-      ignorar = true;
-    };
-  }, [token, userId, onUnauthorized]);
+  const {
+    datos: user,
+    loading,
+    error,
+  } = useConsultaApi<UserDetail>(`/user/${userId}`, token, onUnauthorized);
 
   return (
     <aside className="user-detail" aria-label="Detalle del usuario">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useConsultaApi } from "../../hooks/useConsultaApi";
 import type { UserDetail } from "../../types/user";
 import { formatearSaludo } from "../../utils/usuarios";
 import "./Saludo.css";
@@ -17,64 +17,26 @@ interface SaludoProps {
  * Saluda al usuario logueado y ofrece cerrar la sesión.
  *
  * El token no dice quién es el usuario, así que se hacen dos pedidos
- * encadenados: `GET /user/me/id` devuelve el id del dueño del token y
- * `GET /user/{id}` sus datos, que ya incluyen los roles ("Hola, Martina
- * (ADMIN)"). Si la API responde 401 avisa con `onUnauthorized`; ante
- * cualquier otro error el saludo no se muestra (la lista de usuarios ya
- * informa el error) pero el botón sigue disponible.
+ * encadenados con {@link useConsultaApi}: `GET /user/me/id` devuelve el id
+ * del dueño del token y, cuando llega, `GET /user/{id}` trae sus datos con
+ * los roles ("Hola, Martina (ADMIN)"). Mientras no hay id, la segunda ruta
+ * es `null` y el hook no pide nada. Si algo falla, el saludo no se muestra
+ * (la lista ya informa el error) pero el botón sigue disponible.
  *
  * @param props - {@link SaludoProps}.
  * @returns El saludo y el botón "Cerrar sesión".
  */
 export function Saludo({ token, onCerrarSesion, onUnauthorized }: SaludoProps) {
-  const [usuario, setUsuario] = useState<UserDetail | null>(null);
-
-  useEffect(() => {
-    let ignorar = false;
-
-    async function cargarUsuario() {
-      try {
-        const headers = { Authorization: `Bearer ${token}` };
-        const responseId = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/me/id`,
-          { headers },
-        );
-        const dataId = await responseId.json();
-        if (ignorar) {
-          return;
-        }
-        if (responseId.status === 401) {
-          onUnauthorized();
-          return;
-        }
-        if (!responseId.ok) {
-          return;
-        }
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/${dataId.id}`,
-          { headers },
-        );
-        const data = await response.json();
-        if (ignorar) {
-          return;
-        }
-        if (response.status === 401) {
-          onUnauthorized();
-          return;
-        }
-        if (response.ok) {
-          setUsuario(data);
-        }
-      } catch {
-        // Sin conexión no hay saludo; la lista muestra el error.
-      }
-    }
-
-    cargarUsuario();
-    return () => {
-      ignorar = true;
-    };
-  }, [token, onUnauthorized]);
+  const { datos: miId } = useConsultaApi<{ id: number }>(
+    "/user/me/id",
+    token,
+    onUnauthorized,
+  );
+  const { datos: usuario } = useConsultaApi<UserDetail>(
+    miId ? `/user/${miId.id}` : null,
+    token,
+    onUnauthorized,
+  );
 
   return (
     <div className="saludo">
