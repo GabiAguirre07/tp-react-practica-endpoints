@@ -17,9 +17,10 @@ interface UserDetailPanelProps {
 /**
  * Muestra email, edad, país y roles de un usuario (`GET /user/{id}`).
  *
- * El pedido se repite cada vez que cambia `userId`. Quien lo usa le pasa
- * `key={userId}`: así React crea un panel nuevo por cada usuario elegido y
- * nunca se ve, ni por un instante, el detalle del usuario anterior.
+ * Mientras llega la respuesta muestra "Cargando...". El pedido se repite
+ * cada vez que cambia `userId`. Quien lo usa le pasa `key={userId}`: así
+ * React crea un panel nuevo por cada usuario elegido y nunca se ve, ni por
+ * un instante, el detalle del usuario anterior.
  *
  * @param props - {@link UserDetailPanelProps}.
  * @returns El panel con los datos del usuario o el mensaje de error.
@@ -30,6 +31,7 @@ export function UserDetailPanel({
   onCerrar,
 }: UserDetailPanelProps) {
   const [user, setUser] = useState<UserDetail | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +56,10 @@ export function UserDetailPanel({
         if (!ignorar) {
           setError(MENSAJE_ERROR_RED);
         }
+      } finally {
+        if (!ignorar) {
+          setLoading(false);
+        }
       }
     }
 
@@ -71,6 +77,11 @@ export function UserDetailPanel({
           Cerrar
         </button>
       </div>
+      {loading && (
+        <p className="user-detail-cargando" role="status">
+          Cargando...
+        </p>
+      )}
       {error && (
         <p className="user-detail-error" role="alert">
           {error}

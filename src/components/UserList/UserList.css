@@ -55,3 +55,9 @@
   font-weight: 700;
   background-color: #cffafe;
 }
+
+.user-list-cargando {
+  margin: 0;
+  color: #64748b;
+  font-style: italic;
+}

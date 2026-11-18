@@ -13,8 +13,9 @@ interface UserListProps {
 /**
  * Lista de usuarios (`GET /user`).
  *
- * Pide la lista al montarse y cada vez que cambia el token. Si la API
- * responde con error (401, 403…), muestra su `detail` en lugar de la lista.
+ * Pide la lista al montarse y cada vez que cambia el token. Mientras espera
+ * la respuesta muestra "Cargando..."; si la API responde con error (401,
+ * 403, 404…), muestra su `detail` en lugar de la lista.
  * Cada nombre es un botón: al elegirlo se guarda su id en `selectedId` y se
  * muestra su detalle en {@link UserDetailPanel}.
  *
@@ -23,6 +24,7 @@ interface UserListProps {
  */
 export function UserList({ token }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -30,6 +32,8 @@ export function UserList({ token }: UserListProps) {
     let ignorar = false;
 
     async function cargarUsuarios() {
+      setLoading(true);
+      setError(null);
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/user`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -46,6 +50,10 @@ export function UserList({ token }: UserListProps) {
       } catch {
         if (!ignorar) {
           setError(MENSAJE_ERROR_RED);
+        }
+      } finally {
+        if (!ignorar) {
+          setLoading(false);
         }
       }
     }
@@ -75,12 +83,17 @@ export function UserList({ token }: UserListProps) {
       <h2 className="user-list-titulo" id="user-list-titulo">
         Usuarios
       </h2>
-      {error && (
+      {loading && (
+        <p className="user-list-cargando" role="status">
+          Cargando...
+        </p>
+      )}
+      {!loading && error && (
         <p className="user-list-error" role="alert">
           {error}
         </p>
       )}
-      {!error && (
+      {!loading && !error && (
         <ul className="user-list-items">
           {users.map((user) => (
             <li className="user-list-item" key={user.id}>

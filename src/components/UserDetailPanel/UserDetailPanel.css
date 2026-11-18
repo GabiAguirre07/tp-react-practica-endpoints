@@ -48,3 +48,9 @@
   margin: 0;
   color: #b91c1c;
 }
+
+.user-detail-cargando {
+  margin: 0;
+  color: #64748b;
+  font-style: italic;
+}
